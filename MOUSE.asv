@@ -1,0 +1,31 @@
+classdef MOUSE < handle
+    %UNTITLED4 Summary of this class goes here
+    %   Detailed explanation goes here
+    
+    properties
+        isLicking       = false;
+        lastLickTime    = tic;
+        timeElapsedSinceLastLick = 0;
+    end
+    
+    methods  
+        function obj = checkIfMouseIsLicking(obj, ARDUINO)
+            ARDUINO.readSensorState;  % reads and updates the state of arduino sensor 
+            obj.isLicking = ARDUINO.sensorState;    % sensor state = 1 if mouse licks, zero otherwise
+            obj.lastLickTime = tic;
+        end
+        
+        function obj = setMouseLickingTrue(obj)
+            obj.isLicking = true;
+            obj.lastLickTime = tic;
+            obj.timeElapsedSinceLastLick;
+        end
+        
+        function 
+        
+    end
+    
+    
+    
+end
+

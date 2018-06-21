@@ -1,0 +1,13 @@
+to do
+
+Set Stim Parameters == Petrau stim
+	- dot diameter = 2 degress
+	- 8 motion directions
+	- no collision
+	- life time
+	- 20% coverage
+	
+Create a wheel turn threshold modifier
+Create coherence change modifer
+Create God Button
+Create reward calibration system
