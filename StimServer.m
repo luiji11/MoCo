@@ -14,30 +14,28 @@ classdef StimServer < handle
         end
         
         function obj = openServer(obj)
-            obj.server = tcpip('0.0.0.0',55000,'NetworkRole','Server');
-            disp('Waiting for Client...') 
+            instrreset;  delete(instrfindall); close all;         
+            port_stimComputer = 50000;     
+            ip_ctrlComputer= '192.168.0.6';  % Luis Mac Ip 
+            port_ctrlComputer = 50001;  
+            obj.server = udp(ip_ctrlComputer,port_ctrlComputer,'LocalPort', port_stimComputer);
             fopen(obj.server);
-            disp('Contact made. Stimulus Program Ready')            
             obj.status = 'open';
         end         
         
         function sendMessage(obj, message)
             switch obj.status
                 case 'open'
-                    fwrite(obj.server, message)
-                    disp('message sent')
+                    fprintf(obj.server, message);
+                    disp('message sent to cntrlr')
                 case obj.server.Status
                     disp('server cannot write bc not open')
             end
-            
         end
         
         function msg = readMessageIfAvailable(obj)
-           
             if obj.server.BytesAvailable
-                numBytes = obj.server.BytesAvailable;
-                msg = cellstr(char(fread(obj.server,numBytes)'));
-                msg = msg{1};
+                msg = fscanf(obj.server, '%s');
             else
                  msg = '';
             end
@@ -48,6 +46,7 @@ classdef StimServer < handle
             switch obj.status
                 case 'open'
                     fclose(obj.server);
+                    delete(obj.server);
                     obj.status = 'closed';
             end        
 

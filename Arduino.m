@@ -35,17 +35,19 @@ classdef Arduino < handle
             
         end
         
-        function obj = pulseValve(obj)
+        function obj = triggerValve(obj)
+            PlaySound.rewardtone;
             if obj.isConnected
                 fwrite(obj.Mod, 'p');     
-                disp('Water given');
+                disp('Valve triggered');
             else
-                disp('Cannot give water: Arduino not connected')
+                disp('Cannot trigger valve: Arduino not connected')
             end
+
         end
         
         function sensorState = readSensorState(obj)
-            if obj.isConnected;    
+            if obj.isConnected
                 fwrite(obj.Mod, 'w');
                 obj.sensorState =  fread(obj.Mod,1,'uint8');
                 sensorState = obj.sensorState;
@@ -54,7 +56,50 @@ classdef Arduino < handle
                 disp('Cannot read sensor: Arduino not connected')
             end      
         end
+        
+        function qBtn = waitForTouch(obj, interTouchInterval) 
+            qBtn                = false;
+            lastTouchTime       = nan;
+                   
+            while true
+                % check if sensor was touched if so record time
+                if obj.isConnected
+                    if (obj.readSensorState == 1) 
+                        lastTouchTime = anyTouchEvents;                     
+                    end
+                end
+                
+                % check if key was pressed: If l key, then respond as if
+                % the sensor was touched (for debugging). If q key pressed,
+                % then exit loop 
+                cmd = readKey;   
+                if strcmp(cmd, 'l')
+                        lastTouchTime = anyTouchEvents;                     
+                elseif strcmp(cmd, 'q')
+                    disp('Quit button pressed')
+                    qBtn = true; 
+                    break;                          
+                end
+
+                % get the amount of time elapsed since last touch. if at least 200 ms have surpassed then exit loop
+                if (GetSecs - lastTouchTime) > interTouchInterval
+                    break;
+                end
+               
+                % pause for 16ms  seconds before reading sensor again
+                pause(1/60);                
+
+            end   
+        end
+            
     end
     
+    
 end
+
+function touchTime = anyTouchEvents(obj)
+    disp('Sensor was touched')
+    touchTime = GetSecs;
+end   
+
 

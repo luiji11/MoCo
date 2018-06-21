@@ -14,18 +14,19 @@ classdef StimClient < handle
         end
         
         function obj = openClient(obj)
-            obj.client = tcpip('127.0.0.1',55000,'NetworkRole','Client');
-            disp('Calling Server...') 
+            instrreset;  close all; delete(instrfindall); 
+            ip_stimComputer = '192.168.0.2';   
+            port_stimComputer = 50000;   
+            port_ctrlComputer = 50001;  
+            obj.client = udp(ip_stimComputer, port_stimComputer,'LocalPort',port_ctrlComputer);
             fopen(obj.client);
             obj.status = 'open';
-            disp('Contact made. Ready to control stimulus')   
-            
         end         
         
         function sendMessage(obj, message)
             switch obj.status
                 case 'open'
-                    fwrite(obj.client, message)
+                    fprintf(obj.client, message);
                     disp('message sent')
                 case obj.status
                     disp('client cannot write bc not open')
@@ -33,25 +34,40 @@ classdef StimClient < handle
             
         end
         
+        function msg = waitForMessage(obj, timeOut)    
+            tStart = tic;
+            while toc(tStart) < timeOut
+                msg = obj.readMessageIfAvailable;                
+                if ~isempty(msg)                                       
+                    break;
+                end              
+            end
+            
+            if isempty(msg)                    
+                error('Did not receive any relevent messages');
+            end              
+                       
+            
+            
+            
+        end
+        
         function msg = readMessageIfAvailable(obj)
            
             if obj.client.BytesAvailable
-                numBytes = obj.client.BytesAvailable;
-                msg = cellstr(char(fread(obj.client,numBytes)'));
-                msg = msg{1};
+                msg = fscanf(obj.client, '%s');
             else
                  msg = '';
             end
-            
         end
         
         function obj = closeClient(obj)
             switch obj.status
                 case 'open'
                     fclose(obj.client);
+                    delete(obj.client);
                     obj.status = 'closed';
             end        
-
         end
         
         

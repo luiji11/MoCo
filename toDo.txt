@@ -11,3 +11,6 @@ Create a wheel turn threshold modifier
 Create coherence change modifer
 Create God Button
 Create reward calibration system
+
+Turn speed threshold
+    - or wheel needs to be turned a certain amount (e.g. 40 degrees with a N second period)

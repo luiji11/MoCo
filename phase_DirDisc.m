@@ -38,21 +38,14 @@ function phase_DirDisc(mouseId)
 
 try
 %%
-% Screen
-drw = Draw(false);
-
 % Stimulus
-dts = DotPop(   'numdots',200,...
-                'coherence', 100,...
-                'maxwidth', drw.dispRect(3),...
-                'maxheight', drw.dispRect(4));% initialize dot population 
-
+stm = StimClient;
+stm.sendMessage('newcoherence'); 
+stm.sendMessage('.8');
+stm.sendMessage('whitescreen');
 % Arduino and Wheel
-delete(instrfindall);
-readRate = 30;       % rate (num X per sec) of reading the arduino sensor and wheel 
-ard     = Arduino;  % arduino for lick sensing and reward distribution
-whl     = Wheel;    % wheel for detecting turn     
-
+ard         = Arduino;  % arduino for lick sensing and reward distribution
+whl         = Wheel;    % wheel for detecting turn     
 
 % Data  
 log                 = DataLog(mouseId); % open new data file for mouse to log and save data 
@@ -63,71 +56,78 @@ log.writeToDataFile({'time', 'lick', 'whlPos'});
 phaseDuration       = 60*60;    % duration of phase in seconds (so 60 minutes);
 phaseStartTime      = tic;      % start time of phase
 phaseTimeElapsed    = 0;        % total time elapsed 
-stopLickDuration    = 1;        % must stop licking the reward spout for at least 200 ms for next trial to start
-turnSpeedThreshold  = 2;
 killTask            = false;
-sigDirOptions    = [0 180];
 
-
-
+    
 %% TRAIN
 while (phaseTimeElapsed < phaseDuration) && (killTask == false)
     
-    %--------------------------------------------------------------------
-    %  DISPLAY CENTER DOT & INITIALIZE TRIAL
-    PlaySound.doubleLowPitch;  
-    displayCenterDot(drw, 2);
-    dts.signalDots_direction = sigDirOptions(randi(2)); 
-    dts.assignDotTypeRandomly;
-    %------------------------------------------------------------------
-    % DISPLAY MOVING DOTS, CHECK FOR WHEEL TURN, AND CHECK IF TURN IS
-    % CORRECT
-     [correctResponse, killTask] = moveDotsAndReadResponse(drw, dts, whl, turnSpeedThreshold);
-    %------------------------------------------------------------------
-    % IF CORRECT GIVE REWARD, WAIT FOR CONSUME, AND START NEW TRIAL  
-    % OTHERWISE GO TO CORRECTION TRIAL
+    %  Display Gray Screen
+    PlaySound.doubleLowPitch; 
+    stm.sendMessage('grayscreen');
+    stm.sendMessage('writenewmessage');
+    stm.sendMessage('NEW_TRIAL!!!__(wait__1.5__secs)');
+    pause(1.5)
+    
+    % Display Dots random direction 
+    flushinput(stm.client);
+    stm.sendMessage('newdirection'); 
+    stm.sendMessage('moco');
+    
+    % Wait for mouse to turn wheel
+    [~, whlTrndirection, killTask] = whl.waitForWheelTurn(45, 10); 
 
-    if correctResponse && (killTask == false)
-        rewardEvents(ard);
-        killTask = waitForRewardConsumption(ard, 'lickint', stopLickDuration);
-        inCorrectionTrial = false;
+    % check if the turn direction corresponds to dot direction
+    dotDirection = str2double(stm.waitForMessage(5));
+    disp(dotDirection)
+    correctTurn = (whlTrndirection == dotDirection);  
+    
+    % if so give reward and wait for consumption
+    if  correctTurn 
+        stm.sendMessage('writenewmessage');
+        stm.sendMessage('CORRECT!_(waiting_on_consumption)');                  
+        ard.triggerValve;
+        ard.waitForTouch(2);                
     else
-        disp('WRONG!!!')        
-        inCorrectionTrial = true;
-    end    
-    %------------------------------------------------------------------
-    % CORRECTION TRIAL
-    while inCorrectionTrial && (killTask == false)
-        disp('TIMEOUT!')
-        displayLightsOnScreen(drw, 2);
-        [correctResponse, killTask] = moveDotsAndReadResponse(drw, dts, whl, turnSpeedThreshold);
-        if correctResponse
-            rewardEvents(ard);
-            killTask = waitForRewardConsumption(ard, 'lickint', stopLickDuration);
-            inCorrectionTrial = false;
-        else
-            disp('WRONG!!!')        
-            inCorrectionTrial = true;
-        end            
-                
+    % otherwise repeat the trial with same dot direction
+        while true     
+            %  Display White Screen         
+            stm.sendMessage('writenewmessage');
+            stm.sendMessage('WRONG!!!');   
+            pause(2)                  
+            stm.sendMessage('whitescreen'); 
+            pause(2)      
+
+            % Dots (in same direction) and read wheel       
+            stm.sendMessage('moco');
+            [~, whlTrndirection, killTask] = whl.waitForWheelTurn(45, 10);            
+            correctTurn = (whlTrndirection == dotDirection);               
+            if  correctTurn 
+                stm.sendMessage('writenewmessage');
+                stm.sendMessage('CORRECT!__(Waiting__on__consumption)');                  
+                ard.triggerValve;
+                ard.waitForTouch(2); 
+                break;
+            end       
+        
+        end
+                   
     end
+    
         
     phaseTimeElapsed  = toc(phaseStartTime);
  
 end
 
-drw.closeScreen
-delete(instrfindall)
-fclose('all');
+stm.sendMessage('pause');
+instrreset;
 
 catch ME
-    disp('Safely closed')
-    delete(instrfindall)
-    fclose('all');
+    stm.sendMessage('pause');
+    instrreset;
     sca;
+    disp('Safely closed')    
     rethrow(ME)
-    
-
 end
 
 end

@@ -9,19 +9,17 @@ classdef DotPop < handle
     properties
         color       = [0 0 0];
         directionsOptions = 0:15:345; 
-        dotRadius      = 12;
+        dotRadius      = 10;
         
         
         dots        = struct;        
-        numDots     = 100;        
-        coherence   = 90;
+        numDots           
+        coherence   
         
         directionList
         
-        maxCx = 1920;
-        maxCy = 1080;
-        fieldRadius   = 1000;
-        fieldCxCy       = [1920/2 1080/2]; 
+        maxX  
+        maxY     
                 
         signalDots_Ids
         noiseDots_Ids
@@ -35,51 +33,41 @@ classdef DotPop < handle
     
     methods
         
-        function obj = DotPop(varargin)            
-            keyList = varargin(1:2:end);
-            valList = varargin(2:2:end);
-            
-            for i = 1:numel(keyList)
-                switch keyList{i}
-                    case 'numdots'
-                        obj.numDots  = valList{i};  
-                    case 'dotradius'
-                        obj.dotRadius = valList{i};
-                    case 'coherence'
-                        obj.coherence= valList{i};
-                    case 'maxwidth'
-                         obj.maxCx  = valList{i};
-                    case 'maxheight'
-                         obj.maxCy  = valList{i};
-                    case 'fieldRadius'
-                         obj.fieldRadius = valList{i};
-                    case 'fieldCxCy'
-                         obj.fieldCxCy = valList{i};                         
-                    case 'lifetime'
-                        obj.lifeTime = valList{i};
-                    otherwise
-                        error('Unkown argument')
-                end
+        function [obj, scr] = DotPop   
+            windowPtrs=Screen('Windows');
+            if isempty(windowPtrs)
+                scr = StimScreen;
+                obj.maxX  = scr.dispRect(3);
+                obj.maxY  = scr.dispRect(4);
+            else
+                [obj.maxX , obj.maxY]=Screen('WindowSize', windowPtrs(1));
+                scr=[];
             end
-            
+            % cover 20% of display with dots
+            % half of them are coherent
+            screenArea = obj.maxX * obj.maxY; 
+            dotArea = pi*obj.dotRadius^2 ;
+            obj.numDots = round((.20*screenArea)/dotArea);
+            obj.coherence  = round(.5*obj.numDots);   
+                
             obj.dots = repmat( struct('posIdx', [], 'rect', [], 'direction', [], 'age', 0, 'pathY', [], 'pathX', []), obj.numDots, 1);
-            obj = setCoherence(obj, obj.coherence)   ;         
-            obj = assignDotTypeRandomly(obj);            
-            obj = createDotPaths(obj, 1:obj.numDots);                       
+            setCoherence(obj, obj.coherence)   ;         
+            assignDotTypeRandomly(obj);            
+            createDotPaths(obj, 1:obj.numDots);                       
         end
   
         function obj = createDotPaths(obj, dotIds)
-            maxNumSteps = round(sqrt(obj.maxCx^2 + obj.maxCy^2)/2);
+            maxNumSteps = round(sqrt(obj.maxX^2 + obj.maxY^2)/2);
             for i = dotIds
                 d = obj.dots(i);                
                 % generate a path on a random place on the screen 
-                a  = randi(obj.maxCx);
-                b  = randi(obj.maxCy);
+                a  = randi(obj.maxX);
+                b  = randi(obj.maxY);
                 pathX = a + obj.velocity *(-maxNumSteps:maxNumSteps) * cosd(d.direction);                    
                 pathY = b + obj.velocity *(-maxNumSteps:maxNumSteps) * sind(d.direction);
                                
                 % Trim paths to fit within window
-                outOfBounds = pathX > obj.maxCx | pathX < 1 | pathY > obj.maxCy | pathY < 1;
+                outOfBounds = pathX > obj.maxX | pathX < 1 | pathY > obj.maxY | pathY < 1;
                 pathX(outOfBounds) = [];
                 pathY(outOfBounds) = [];                
                 obj.dots(i).pathX = pathX;
@@ -91,16 +79,19 @@ classdef DotPop < handle
         end
         
        function obj = setCoherence(obj, coherence)
-           if coherence > obj.numDots
-               coherence = obj.numDots;
-           end
-           % change coherence, assign dots to be part of signal or noise at
-           % random, then create dot paths again
-           obj.coherence   = coherence;   
-           obj = assignDotTypeRandomly(obj); 
-           obj = createDotPaths(obj, 1:obj.numDots);            
+            if coherence > obj.numDots
+                coherence = obj.numDots;
+            elseif coherence < 1
+                coherence = 1;
+            end
+            % change coherence, assign dots to be part of signal or noise at
+            % random, then create dot paths again
+            obj.coherence   = coherence;   
+            obj = assignDotTypeRandomly(obj); 
+            obj = createDotPaths(obj, 1:obj.numDots);            
        end        
         
+
          function obj = assignDotTypeRandomly(obj)
             dotIds                  = randperm(obj.numDots);
             obj.signalDots_Ids      = dotIds(1:obj.coherence);
@@ -137,12 +128,20 @@ classdef DotPop < handle
             end
         end
 
-        function obj = createNewDotPop(obj)
-            sigDirOptions    = [0 180];
-            obj.signalDots_direction = sigDirOptions(randi(2)); 
-            obj.assignDotTypeRandomly;
-            obj.createDotPaths(1:obj.numDots);        
+        function obj = setNewSignalDirection(obj, newDir)
+            obj.signalDots_direction = newDir;        
+            for i = obj.signalDots_Ids
+                obj.dots(i).direction = newDir;
+            end            
+            obj.createDotPaths(obj.signalDots_Ids);       
         end
+        
+        function newDir = setNewSignalDirectionAtRandom(obj)
+            sigDirOptions    = [0 180];
+            newDir = sigDirOptions(randi(2));            
+            obj.setNewSignalDirection(newDir)                        
+        end
+        
         function obj = incrementDotAge(obj, dotIds)
             for i = dotIds
                 obj.dots(i).age = obj.dots(i).age + 1;                       
@@ -158,13 +157,6 @@ classdef DotPop < handle
         function obj = check4DeadDots(obj) % check which dots exceeded their lifetime
             obj.deadDot_Ids = find( [obj.dots(:).age] >= obj.lifetime ); 
         end
-        
-
-        
-
- 
-        
-
         
         
     end

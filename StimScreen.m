@@ -5,7 +5,7 @@ classdef StimScreen < handle
     properties
         screenRect  = get(0,'screensize');                      % size of computer display screen
         pcID    = double(~isempty(strfind(cd, 'Luis')));    % 0 if luis's pc, 1 if in trachtenberg lab
-
+%         pcID = 0;
         windowPtr;
         dispRect;
         dispCx;
@@ -23,7 +23,7 @@ classdef StimScreen < handle
         function obj = StimScreen(openMiniScreen)
             if nargin == 0
               obj.openMiniScreen = false;
-            elseif nargin == 1;
+            elseif nargin == 1
                 obj.openMiniScreen = openMiniScreen; 
             else
                error('Too many arguments') 
@@ -33,10 +33,13 @@ classdef StimScreen < handle
         
         function obj = openWindow(obj)
             sca;
-            if obj.openMiniScreen
-                rect = [obj.screenRect(3)-400 0 obj.screenRect(3) 400] ;               
+            if obj.pcID
+                rect = [2000 500 3000 1200] ;   
+                rect = [obj.screenRect(3)-500 obj.screenRect(4)-500 obj.screenRect(3) obj.screenRect(4)];
+                
             else
-                rect = [];
+                rect = [obj.screenRect(3)-400 obj.screenRect(4)-400 obj.screenRect(3) obj.screenRect(4)];
+                
             end
             [obj.windowPtr, obj.dispRect] = Screen('OpenWindow', obj.pcID, 127*[1 1 1], rect);
 

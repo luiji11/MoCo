@@ -43,10 +43,11 @@ classdef Wheel < handle
         end
       
         
-        function obj = readWheelPosition(obj) % reads and updates the current speed & direction of the wheel turn
+        function posDeg = readWheelPosition(obj) % reads and updates the current speed & direction of the wheel turn
 
             if obj.isConnected
-                obj.currentPosition     = obj.Mod.currentPosition;     
+                 posDeg    = obj.Mod.currentPosition;    
+                 obj.currentPosition = posDeg;
             else
                disp('Wheel not connected; cannot read position') 
             end
@@ -74,20 +75,59 @@ classdef Wheel < handle
             
         end
         
-        function winfo = wheelInfo(obj, varargin)
+        function winfo = wheelInfo(obj, turnSpeedThreshold)
             whl.readTurnSpeed;
             winfo.turnSpeed           = obj.turnSpeed; 
-            winfo.turnDirection       = obj.turnDirection;
-            
-            if nargin == 1 
-                turnSpeedThreshold = 3;
-            elseif nargin == 2
-                turnSpeedThreshold = varargin{1};
-            end
-                
+            winfo.turnDirection       = obj.turnDirection;                          
             winfo.turnedWheel         = abs(winfo.turnSpeed) > turnSpeedThreshold;             
         end
     
+        
+        function [didTurn, direction, quitBttn] = waitForWheelTurn(obj, deg, secs)
+            if obj.isConnected
+                obj.Mod.zeroEncoder
+            end    
+            didTurn     = false;
+            cPos        = 0;
+            direction   = [];            
+            tStart      = GetSecs;
+            quitBttn    = false;
+                       
+            while (GetSecs - tStart) < secs
+                cmd = readKey;
+                if obj.isConnected
+                   cPos = obj.readWheelPosition;
+                elseif strcmp(cmd, 'a')
+                      cPos = cPos - 1; 
+                      fprintf('\nWheel turned (@%.01f deg)', cPos);
+                elseif strcmp(cmd, 'd')
+                      cPos = cPos + 1;
+                      fprintf('\nWheel turned (@%.01f deg)', cPos);
+                elseif strcmp(cmd, 'q')                       
+                      quitBttn = true; 
+                      disp('User Exited');                                             
+                      break;  
+                end
+                              
+               if abs(cPos) >= deg
+                   if cPos < 0
+                       direction = 180;
+                   elseif cPos > 0
+                       direction = 0;                       
+                   end   
+                   didTurn = true;
+                   fprintf('\n\n***Wheel turned %.01f deg in %.01f sec***\n',deg, secs);
+                   break; 
+               end
+               pause(1/60);
+            end
+            
+            if ~didTurn
+                fprintf('\n\n***Wheel DID NOT TURN ENOUGH WITHIN %.01f SECS***\n', secs);           
+            end
+
+        end
+        
 
         
         
