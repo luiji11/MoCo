@@ -1,5 +1,5 @@
 function rewardEvents(ard)
     disp('LICKED !!!')
-    ard.pulseValve;         
+    ard.triggerValve;         
     PlaySound.quickMediumPitch; 
 end

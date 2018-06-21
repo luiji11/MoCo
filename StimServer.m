@@ -10,17 +10,33 @@ classdef StimServer < handle
     methods
         
         function obj = StimServer
+            try
             obj.openServer;
+            catch
+                 instrreset;  
+                disp('Error but safely closed')               
+            end
         end
         
         function obj = openServer(obj)
-            instrreset;  delete(instrfindall); close all;         
-            port_stimComputer = 50000;     
-            ip_ctrlComputer= '192.168.0.6';  % Luis Mac Ip 
-            port_ctrlComputer = 50001;  
-            obj.server = udp(ip_ctrlComputer,port_ctrlComputer,'LocalPort', port_stimComputer);
-            fopen(obj.server);
-            obj.status = 'open';
+            try
+                if KeyInfo.onLuisPc	     
+                    instrreset;                  
+                    obj.server = udp(KeyInfo.luisMacIp,KeyInfo.luisMacPort,'LocalPort', KeyInfo.luisPcPort);              
+                    disp('Opened Stimulus Server (upd)')                
+                elseif KeyInfo.onTrachPc
+                    obj.server = tcpip('0.0.0.0', KeyInfo.trachPcPort, 'NetworkRole', 'server');
+                    disp('Opened Stimulus Server (tcpip)')
+                else
+                   error('Unkown Machines; cannot set up comminication') 
+                end
+                fopen(obj.server);
+                obj.status = 'open';
+            catch ME
+                instrreset;  
+                disp('Error but safely closed')
+                rethrow(ME)
+            end
         end         
         
         function sendMessage(obj, message)
@@ -40,6 +56,14 @@ classdef StimServer < handle
                  msg = '';
             end
             
+            if strcmp(msg, 'shutdown')
+                obj.closeServer;
+                if KeyInfo.onTrachPc
+                    disp('Matlab Will Close...')
+                    pause(.5)
+                    exit;
+                end
+            end
         end
         
         function obj = closeServer(obj)

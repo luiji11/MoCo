@@ -39,7 +39,8 @@ function phase_DirDisc(mouseId)
 try
 %%
 % Stimulus
-stm = StimClient;
+instrreset;
+stm = StimCmd;
 stm.sendMessage('newcoherence'); 
 stm.sendMessage('.8');
 stm.sendMessage('whitescreen');
@@ -72,7 +73,6 @@ while (phaseTimeElapsed < phaseDuration) && (killTask == false)
     % Display Dots random direction 
     flushinput(stm.client);
     stm.sendMessage('newdirection'); 
-    stm.sendMessage('moco');
     
     % Wait for mouse to turn wheel
     [~, whlTrndirection, killTask] = whl.waitForWheelTurn(45, 10); 
@@ -119,13 +119,12 @@ while (phaseTimeElapsed < phaseDuration) && (killTask == false)
  
 end
 
-stm.sendMessage('pause');
+stm.sendMessage('shutdown');
 instrreset;
 
 catch ME
-    stm.sendMessage('pause');
+    stm.sendMessage('shutdown');
     instrreset;
-    sca;
     disp('Safely closed')    
     rethrow(ME)
 end

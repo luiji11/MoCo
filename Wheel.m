@@ -85,7 +85,7 @@ classdef Wheel < handle
         
         function [didTurn, direction, quitBttn] = waitForWheelTurn(obj, deg, secs)
             if obj.isConnected
-                obj.Mod.zeroEncoder
+                obj.Mod.zeroPosition
             end    
             didTurn     = false;
             cPos        = 0;
@@ -99,15 +99,15 @@ classdef Wheel < handle
                    cPos = obj.readWheelPosition;
                 elseif strcmp(cmd, 'a')
                       cPos = cPos - 1; 
-                      fprintf('\nWheel turned (@%.01f deg)', cPos);
                 elseif strcmp(cmd, 'd')
                       cPos = cPos + 1;
-                      fprintf('\nWheel turned (@%.01f deg)', cPos);
                 elseif strcmp(cmd, 'q')                       
                       quitBttn = true; 
                       disp('User Exited');                                             
                       break;  
                 end
+                   fprintf('\nWheel turned (@%.01f deg)', cPos)
+                
                               
                if abs(cPos) >= deg
                    if cPos < 0
@@ -116,7 +116,7 @@ classdef Wheel < handle
                        direction = 0;                       
                    end   
                    didTurn = true;
-                   fprintf('\n\n***Wheel turned %.01f deg in %.01f sec***\n',deg, secs);
+                   fprintf('\n\n***Wheel turned %.01f deg within %.01f sec***\n',deg, secs);
                    break; 
                end
                pause(1/60);

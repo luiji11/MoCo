@@ -33,16 +33,13 @@ classdef StimScreen < handle
         
         function obj = openWindow(obj)
             sca;
-            if obj.pcID
-                rect = [2000 500 3000 1200] ;   
-                rect = [obj.screenRect(3)-500 obj.screenRect(4)-500 obj.screenRect(3) obj.screenRect(4)];
-                
+            if KeyInfo.isDebugging
+                rect = [obj.screenRect(3)-500 0 obj.screenRect(3) obj.screenRect(4)-200];               
             else
-                rect = [obj.screenRect(3)-400 obj.screenRect(4)-400 obj.screenRect(3) obj.screenRect(4)];
-                
+                rect = [];
             end
             [obj.windowPtr, obj.dispRect] = Screen('OpenWindow', obj.pcID, 127*[1 1 1], rect);
-
+            Screen('MATLABToFront')
             obj.status = 'open';                        
             Screen('Preference', 'SkipSyncTests', 1);
             Screen('Preference', 'Verbosity', 0);  

@@ -7,10 +7,11 @@ classdef StimProgram < handle
         dts        
         srv
         msgOptions = {  'pause',...
-                        'moco', 'newdirection', 'setcoherence',...
+                        'moco', 'newdirection', 'setcoherence','setlifetime',...
                         'whitescreen', 'grayscreen',...
                         'writenewmessage',...
-                        'finish'};
+                        'shutdown'};
+        setThenShow = true;
         msg
     end
     
@@ -33,8 +34,9 @@ classdef StimProgram < handle
         end
         
         function start(obj)
-            [obj.dts, obj.scr] = DotPop;
-            obj.srv     = StimServer;
+            obj.dts = DotPop;
+            obj.scr = obj.dts.openDotPopAndScreen;
+            obj.srv = StimServer;
             obj.msg = 'pause';
             while true
                 switch obj.msg  
@@ -43,20 +45,19 @@ classdef StimProgram < handle
                     case 'moco'
                         obj.moco;
                     case 'newdirection'
-                        obj.dts.setNewSignalDirectionAtRandom;
-                        newDir = obj.dts.setNewSignalDirectionAtRandom;
-                        obj.srv.sendMessage(num2str(newDir));
-                        obj.msg = 'pause';
+                        obj.newdirection
                     case 'setcoherence'
-                        obj.setcoherence;                        
+                        obj.setcoherence;  
+                    case 'setlifetime'
+                        obj.setlifetime
                     case 'whitescreen'
                         obj.coloredScreen([255 255 255]);
                     case 'grayscreen'
                         obj.coloredScreen([127 127 127]); 
                     case 'writenewmessage'
                         obj.writenewmessage;
-                    case 'finish'
-                        obj.finish 
+                    case 'shutdown'
+                        obj.shutdown 
                         break;
                 end
             end
@@ -84,15 +85,49 @@ classdef StimProgram < handle
                 if ~isempty(c) && ~isnan(c)
                     numCoherentDots = round(c*obj.dts.numDots);
                     obj.dts.setCoherence(numCoherentDots);
-                    obj.drawCenterText(sprintf('Coherence Set to %.02f',c))  ;                                   
-                    obj.scr.flipScreen;  
-                    obj.msg = 'pause';
-                    pause(1.25)
+                    if obj.setThenShow
+                        obj.msg = 'moco';
+                    else
+                        obj.drawCenterText(sprintf('Coherence Set to %.02f',c));                                   
+                        obj.scr.flipScreen;                          
+                        obj.msg = 'pause';
+                        pause(1.25)
+                    end
                     break 
                 end 
             end          
         end
-
+        function obj = setlifetime(obj)
+            while true
+                obj.drawCenterText('Enter life time value [in frames from 1 to inf]...') ;                 
+                obj.scr.flipScreen;    
+                obj.msg = obj.srv.readMessageIfAvailable;
+                c= str2num(obj.msg);
+                if ~isempty(c) && ~isnan(c)
+                    obj.dts.setNewLifeTime(c);
+                    if obj.setThenShow
+                        obj.msg = 'moco';
+                    else
+                        obj.drawCenterText(sprintf('Life Time Set to %d frames',c))  ;                                   
+                        obj.scr.flipScreen;                         
+                        obj.msg = 'pause';
+                        pause(1.25)
+                    end
+                    break 
+                end 
+            end          
+        end
+        
+        function newdirection(obj)
+            obj.dts.setNewSignalDirectionAtRandom;
+            newDir = obj.dts.setNewSignalDirectionAtRandom;
+            obj.srv.sendMessage(num2str(newDir));
+            if obj.setThenShow
+                obj.msg = 'moco';
+            else                       
+                obj.msg = 'pause';
+            end            
+        end
 
         function obj = moco(obj)
             tStart = tic;
@@ -153,7 +188,7 @@ classdef StimProgram < handle
         end
         
         
-        function finish(obj)
+        function shutdown(obj)
             obj.scr.closeScreen
             obj.srv.closeServer 
             instrreset
