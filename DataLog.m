@@ -68,7 +68,11 @@ classdef DataLog < handle
    
     methods  (Static)
         function data = viewDataFile
-            d = dir([cd '\beh_data']); 
+            if ispc
+                d = dir([cd '\beh_data']); 
+            elseif ismac
+                 d = dir([cd '/beh_data']);                                
+            end
             mouseFolders = d([d.isdir]);
             mouseFolders = mouseFolders(3:end);
             nMiceDataSets = numel(mouseFolders);

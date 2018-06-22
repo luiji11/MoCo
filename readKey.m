@@ -10,7 +10,7 @@ function keyCmd = readKey
         end
                
         if keyIsDown
-           fprintf('\t[%s] pressed', keyCmd)
+           fprintf('\t[%s] pressed   ', keyCmd)
         end
 end
 

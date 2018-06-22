@@ -2,11 +2,11 @@ function checkLickSensor
     ard = Arduino;
 
     if ~ard.isConnected 
-       instrreset;
+       delete(instrfind('tag', 'arduinoLickPort'))
        ard = Arduino;
     end
         
-    disp('Touch sensor to check if works. Press esc key to exit') 
+    disp('Touch sensor to check if works. Press q key to exit') 
     disp('Will start in ')     
     for i = 1:3
         fprintf('...\t %d', i)
@@ -20,11 +20,10 @@ function checkLickSensor
             ard.triggerValve;         
             PlaySound.quickMediumPitch;   
         end
-        if strcmp(readKey, 'esc')
+        if strcmp(readKey, 'q')
             fprintf('\nTest Exited\n')
            break;
-        end   
-        
+        end           
     end
 
 

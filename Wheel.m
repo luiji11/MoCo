@@ -1,4 +1,4 @@
-classdef Wheel < handle
+classdef Wheel < handle 
     %UNTITLED2 Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -20,13 +20,13 @@ classdef Wheel < handle
         function obj = callWheel(obj)
             try 
                 warning('off');
-                fprintf('\t\n')        
-                obj.Mod = RotaryEncoderModule('COM15'); % encoder in port #15 
+                delete(instrfind('tag', Devices.arduinoTag));
+                disp('CALLING WHEEL...')        
+                pause(.5);                  
+                obj.Mod = RotaryEncoderModule(Devices.wheelPort); % encoder in port #15 
                 obj.Mod.zeroPosition;           % zero the encoder
                 obj.lastPosition = 0;
-                readTurnSpeed(obj);                
-                disp('      Connected :)')
-
+                disp('      Wheel Connected :)')
                 warning('on');
 
             catch
@@ -35,7 +35,7 @@ classdef Wheel < handle
                 obj.turnSpeed   = nan;    % cannot compute speed of wheel turn
                 obj.turnDirection = nan;
                 obj.currentPosition = nan;
-                disp('      !!!CONNECTION FAILED :(');
+                disp('      !!!WHEEL CONNECTION FAILED :(');
                 pause(.02)
             end        
         
@@ -44,7 +44,6 @@ classdef Wheel < handle
       
         
         function posDeg = readWheelPosition(obj) % reads and updates the current speed & direction of the wheel turn
-
             if obj.isConnected
                  posDeg    = obj.Mod.currentPosition;    
                  obj.currentPosition = posDeg;
@@ -52,34 +51,6 @@ classdef Wheel < handle
                disp('Wheel not connected; cannot read position') 
             end
             
-        end
-        
-        function turnSpeed = readTurnSpeed(obj) % reads and updates the current speed & direction of the wheel turn
-            if obj.isConnected
-                obj.currentPosition = obj.Mod.currentPosition; 
-                obj.turnSpeed       = obj.currentPosition - obj.lastPosition;                
-                obj.lastPosition    = obj.currentPosition;
-                
-                if sign(obj.turnSpeed) > 0 
-                    obj.turnDirection = 0;
-                elseif sign(obj.turnSpeed) < 0
-                    obj.turnDirection = 180;
-                elseif sign(obj.turnSpeed) == 0
-                    obj.turnDirection = nan;
-                end
-                turnSpeed = obj.turnSpeed;
-            else
-                turnSpeed = [];
-                disp('Wheel not connected; cannot read speed') 
-            end
-            
-        end
-        
-        function winfo = wheelInfo(obj, turnSpeedThreshold)
-            whl.readTurnSpeed;
-            winfo.turnSpeed           = obj.turnSpeed; 
-            winfo.turnDirection       = obj.turnDirection;                          
-            winfo.turnedWheel         = abs(winfo.turnSpeed) > turnSpeedThreshold;             
         end
     
         

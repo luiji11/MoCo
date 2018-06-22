@@ -10,7 +10,6 @@ classdef PlaySound
         
         function rewardtone
             sound(.1*sind(75*(1:200)));
-
         end
         
         function doubleLowPitch

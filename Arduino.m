@@ -3,47 +3,59 @@ classdef Arduino < handle
     %   Detailed explanation goes here
     
     properties
-        isConnected = true;
+        isConnected;
         Mod
-        valve
+        pulseWidth
         sensorState
     end
     
     methods
         function obj = Arduino
-            obj = callArduino(obj);
+            obj = callArduino(obj);           
         end
         
-        function obj = callArduino(obj)
+        function obj = callArduino(obj)  
+       
+            if Devices.onTrachPc
+                tStart = tic;         
+                pause(.5);              
+                while toc(tStart) < 40 % wait 40 seconds for new matlab to open and start program
+                    try
+                        delete(instrfind('tag', Devices.arduinoTag));
+                        obj.Mod = serial(Devices.arduinoPort, 'tag', Devices.arduinoNameTag); % COM17                       
+                        fopen(obj.Mod);               
+                    catch 
+                    end  
 
-            try
-                disp('CALLING ARDUINO...')        
-                obj.Mod = serial('COM17');
-                obj.Mod.BaudRate = 9600;
-                fopen(obj.Mod);
-                disp('      Connected :)')
-                obj.valve.pulseWidth = .045; 
-                
-                pause(1); % pause otherwise cant read sensor 
-                obj.readSensorState;
+                    if strcmp(obj.Mod.Status, 'open')
+                       obj.isConnected = true;
+                       fprintf('/tArduino Connected :)/n') ;
+                       break;
+                    else
+                       obj.isConnected = false;                   
+                       disp('Could Not Connect; will try again');
+                    end                
+                    pause(1);
+                end
+                pause(1); % pause breifly once connected, otherwise cant read sensor
 
-            catch
-                obj.isConnected = false;    
-                disp('      ***Connection Failed :(')
-                pause(.5)
-            end  
+            elseif Devices.onLuisPc || Devices.onLuisMac
+                obj.isConnected = false;   
+                disp('Arduino cannot be connected on this device');
+            end
             
+            obj.updatePulseWidth;
+            obj.readSensorState;
         end
         
-        function obj = triggerValve(obj)
-            PlaySound.rewardtone;
+        function obj = triggerValve(obj)     
             if obj.isConnected
+                PlaySound.rewardtone;
                 fwrite(obj.Mod, 'p');     
                 disp('Valve triggered');
             else
-                disp('Cannot trigger valve: Arduino not connected')
+                disp('Cannot trigger valve: Arduino not connected');
             end
-
         end
         
         function sensorState = readSensorState(obj)
@@ -53,7 +65,7 @@ classdef Arduino < handle
                 sensorState = obj.sensorState;
             else
                 sensorState = [];
-                disp('Cannot read sensor: Arduino not connected')
+                disp('Cannot read sensor: Arduino not connected');
             end      
         end
         
@@ -65,7 +77,7 @@ classdef Arduino < handle
                 % check if sensor was touched if so record time
                 if obj.isConnected
                     if (obj.readSensorState == 1) 
-                        lastTouchTime = anyTouchEvents;                     
+                        lastTouchTime = touchEvents;                     
                     end
                 end
                 
@@ -74,7 +86,7 @@ classdef Arduino < handle
                 % then exit loop 
                 cmd = readKey;   
                 if strcmp(cmd, 'l')
-                        lastTouchTime = anyTouchEvents;                     
+                        lastTouchTime = touchEvents;                     
                 elseif strcmp(cmd, 'q')
                     disp('Quit button pressed')
                     qBtn = true; 
@@ -91,13 +103,23 @@ classdef Arduino < handle
 
             end   
         end
+        
+
+        
+        function updatePulseWidth(obj)   
+            % write to arduino
+            % have it respond with pulse width***
+            % arduinoPulseWidth = pulseWidthResponse
+            obj.pulseWidth = .045;
+        end
+        
             
     end
     
     
 end
 
-function touchTime = anyTouchEvents(obj)
+function touchTime = touchEvents
     disp('Sensor was touched')
     touchTime = GetSecs;
 end   
